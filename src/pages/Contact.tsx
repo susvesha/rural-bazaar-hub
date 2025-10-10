@@ -34,13 +34,13 @@ const Contact = () => {
     {
       icon: Phone,
       title: "Phone",
-      details: "+91 98765 43210",
-      link: "tel:+919876543210",
+      details: "+91 xxxxxxxxx",
+      link: "tel:+91xxxxxxxxx",
     },
     {
       icon: MapPin,
       title: "Address",
-      details: "Mumbai, Maharashtra, India",
+      details: "Nambur, Andhra Pradesh, India",
       link: "#",
     },
   ];
