@@ -94,7 +94,7 @@ const Footer = () => {
 
         <div className="mt-8 pt-8 border-t border-border text-center">
           <p className="text-sm text-muted-foreground">
-            © 2024 LocalBazaar. All rights reserved. Empowering rural communities.
+            © 2025 LocalBazaar. All rights reserved. Empowering rural communities.
           </p>
         </div>
       </div>
