@@ -199,27 +199,4 @@ For issues and questions, please open an issue on the GitHub repository.
 
 ---
 
-**Rural Bazaar Hub** - Empowering Rural Entrepreneurs Through Digital Commerce
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/fabf21dd-5e73-4a0a-aac9-21607dc661c4) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**Rural Bazaar Hub** - Empowering Rural Entrepreneurs Through Digital Commerce  
