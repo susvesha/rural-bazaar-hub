@@ -77,7 +77,17 @@ const Chat = () => {
     if (!activeConv) return;
     const fetchMsgs = async () => {
       const { data } = await supabase.from("messages").select("*").eq("conversation_id", activeConv).order("created_at", { ascending: true });
-      if (data) setMessages(data as Message[]);
+      if (data) {
+        setMessages(data as Message[]);
+        // Mark all messages as read for this conversation if they're not from the current user
+        const unreadMsgs = data.filter((msg: any) => !msg.read && msg.sender_id !== user?.id);
+        if (unreadMsgs.length > 0) {
+          await supabase.from("messages").update({ read: true })
+            .eq("conversation_id", activeConv)
+            .eq("read", false)
+            .neq("sender_id", user?.id);
+        }
+      }
     };
     fetchMsgs();
 
@@ -88,19 +98,21 @@ const Chat = () => {
           const newMessage = payload.new as Message;
           setMessages((prev) => [...prev, newMessage]);
           // Show notification only if the message is from the other person
-          if (newMessage.sender_id !== user.id) {
+          if (newMessage.sender_id !== user?.id) {
             const sender = conversations.find(c => 
               c.id === activeConv
             )?.other_name || "Someone";
             toast.success(`New message from ${sender}`, {
               description: newMessage.content.slice(0, 50) + (newMessage.content.length > 50 ? "..." : ""),
             });
+            // Mark as read immediately
+            supabase.from("messages").update({ read: true }).eq("id", newMessage.id);
           }
         }
       ).subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [activeConv]);
+  }, [activeConv, user?.id, conversations]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 

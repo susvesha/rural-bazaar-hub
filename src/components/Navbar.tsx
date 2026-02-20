@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "./ui/sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +20,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
   const [cartCount, setCartCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -40,6 +42,63 @@ const Navbar = () => {
     const channel = supabase.channel("cart-count")
       .on("postgres_changes", { event: "*", schema: "public", table: "cart_items", filter: `user_id=eq.${user.id}` }, fetchCartCount)
       .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+  // Fetch and subscribe to unread messages
+  useEffect(() => {
+    if (!user) { setUnreadMessages(0); return; }
+    
+    const fetchUnreadMessages = async () => {
+      const { data: conversations } = await supabase.from("conversations").select("id")
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`);
+      
+      if (!conversations || conversations.length === 0) {
+        setUnreadMessages(0);
+        return;
+      }
+
+      let totalUnread = 0;
+      for (const conv of conversations) {
+        const { count } = await supabase.from("messages").select("*", { count: "exact", head: true })
+          .eq("conversation_id", conv.id)
+          .eq("read", false)
+          .neq("sender_id", user.id);
+        totalUnread += count || 0;
+      }
+      setUnreadMessages(totalUnread);
+    };
+
+    fetchUnreadMessages();
+
+    // Subscribe to new messages
+    const channel = supabase.channel("messages-notifications")
+      .on("postgres_changes", { 
+        event: "INSERT", 
+        schema: "public", 
+        table: "messages" 
+      }, async (payload) => {
+        const newMessage = payload.new as any;
+        // Only count if message is not from current user
+        if (newMessage.sender_id !== user.id) {
+          setUnreadMessages((prev) => prev + 1);
+          
+          // Fetch sender name for the toast
+          const { data: conv } = await supabase.from("conversations").select("buyer_id, seller_id").eq("id", newMessage.conversation_id).single();
+          if (conv) {
+            const otherUserId = conv.buyer_id === user.id ? conv.seller_id : conv.buyer_id;
+            const { data: profile } = await supabase.from("profiles").select("full_name").eq("user_id", otherUserId).single();
+            const senderName = profile?.full_name || "Someone";
+            
+            toast.success(`New message from ${senderName}`, {
+              description: newMessage.content.slice(0, 50) + (newMessage.content.length > 50 ? "..." : ""),
+              duration: 4000,
+            });
+          }
+        }
+      })
+      .subscribe();
+
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
@@ -85,7 +144,16 @@ const Navbar = () => {
                     </Link>
                   </Button>
                 )}
-                <Button asChild variant="ghost"><Link to="/chat"><MessageCircle className="h-5 w-5" /></Link></Button>
+                <Button asChild variant="ghost" className="relative">
+                  <Link to="/chat">
+                    <MessageCircle className="h-5 w-5" />
+                    {unreadMessages > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold animate-pulse">
+                        {unreadMessages > 99 ? "99+" : unreadMessages}
+                      </span>
+                    )}
+                  </Link>
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="gap-2">
@@ -134,6 +202,16 @@ const Navbar = () => {
                 <div className="pt-3 space-y-2">
                   <Button asChild variant="outline" className="w-full" onClick={() => setIsOpen(false)}><Link to="/profile">Profile</Link></Button>
                   {profile?.user_type === "buyer" && <Button asChild variant="outline" className="w-full" onClick={() => setIsOpen(false)}><Link to="/cart">Cart ({cartCount})</Link></Button>}
+                  <Button asChild variant="outline" className="w-full relative" onClick={() => setIsOpen(false)}>
+                    <Link to="/chat" className="flex items-center justify-between">
+                      <span>Messages</span>
+                      {unreadMessages > 0 && (
+                        <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                          {unreadMessages > 99 ? "99+" : unreadMessages}
+                        </span>
+                      )}
+                    </Link>
+                  </Button>
                   {profile?.user_type === "seller" && <Button asChild variant="outline" className="w-full" onClick={() => setIsOpen(false)}><Link to="/seller-dashboard">Dashboard</Link></Button>}
                   <Button variant="outline" className="w-full" onClick={() => { handleSignOut(); setIsOpen(false); }}>Sign Out</Button>
                 </div>
