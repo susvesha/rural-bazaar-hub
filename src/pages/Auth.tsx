@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { user, profile, signIn, signUp } = useAuth();
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [signupName, setSignupName] = useState("");
@@ -19,6 +19,23 @@ const Auth = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [userType, setUserType] = useState<"buyer" | "seller">("buyer");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check if user is already logged in and redirect accordingly
+  useEffect(() => {
+    if (user && profile) {
+      if (profile.user_type === "seller") {
+        navigate("/seller-dashboard");
+      } else {
+        // Buyer trying to access auth - redirect to products
+        navigate("/products");
+      }
+    }
+  }, [user, profile, navigate]);
+
+  // Don't show auth page if user is already logged in
+  if (user && profile) {
+    return null;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
